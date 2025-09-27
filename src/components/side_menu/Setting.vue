@@ -2,49 +2,55 @@
   <el-aside class="modern-sidebar">
     <nav class="sidebar-nav">
       <div class="nav-section">
-        <div class="nav-section-title">商品操作</div>
+        <div class="nav-section-title">設定</div>
         
         <div 
           class="nav-item" 
-          @click="entryItem"
-          :class="{ 'active': activeItem === 'entry' }"
+          @click="showSetting('1')"
+          :class="{ 'active': activeIndex === '1' }"
         >
-          <div class="nav-icon">📦</div>
-          <span class="nav-text">商品登録</span>
+          <div class="nav-icon">🔐</div>
+          <span class="nav-text">ライセンス認証</span>
           <div class="nav-arrow">→</div>
         </div>
         
         <div 
           class="nav-item" 
-          @click="modifyItem"
-          :class="{ 'active': activeItem === 'modify' }"
+          @click="showSetting('2')"
+          :class="{ 'active': activeIndex === '2' }"
         >
-          <div class="nav-icon">✏️</div>
-          <span class="nav-text">商品修正</span>
+          <div class="nav-icon">👤</div>
+          <span class="nav-text">アカウント</span>
           <div class="nav-arrow">→</div>
         </div>
-        
-        <div 
-          class="nav-item danger" 
-          @click="deleteItem"
-          :class="{ 'active': activeItem === 'delete' }"
-        >
-          <div class="nav-icon">🗑️</div>
-          <span class="nav-text">商品削除</span>
-          <div class="nav-arrow">→</div>
-        </div>
-      </div>
-      
-      <div class="nav-section">
-        <div class="nav-section-title">出品管理</div>
         
         <div 
           class="nav-item" 
-          @click="entryExhibition"
-          :class="{ 'active': activeItem === 'exhibition' }"
+          @click="showSetting('3')"
+          :class="{ 'active': activeIndex === '3' }"
         >
-          <div class="nav-icon">🛍️</div>
-          <span class="nav-text">出品登録</span>
+          <div class="nav-icon">⏰</div>
+          <span class="nav-text">出品間隔</span>
+          <div class="nav-arrow">→</div>
+        </div>
+        
+        <div 
+          class="nav-item" 
+          @click="showSetting('4')"
+          :class="{ 'active': activeIndex === '4' }"
+        >
+          <div class="nav-icon">🖼️</div>
+          <span class="nav-text">画像パス確認</span>
+          <div class="nav-arrow">→</div>
+        </div>
+        
+        <div 
+          class="nav-item" 
+          @click="showSetting('5')"
+          :class="{ 'active': activeIndex === '5' }"
+        >
+          <div class="nav-icon">📁</div>
+          <span class="nav-text">データ入出力</span>
           <div class="nav-arrow">→</div>
         </div>
       </div>
@@ -54,50 +60,56 @@
       <div class="footer-info">
         <div class="info-item">
           <span class="info-label">バージョン</span>
-          <span class="info-value">v3.7.0</span>
+          <span class="info-value">v{{version}}</span>
         </div>
       </div>
     </div>
   </el-aside>
 </template>
 
-<script setup lang="ts">
-import { ref } from 'vue'
-
-interface Props {
-  activeIdx: number
-}
-
-defineProps<Props>()
-
-const emit = defineEmits<{
-  entryItem: []
-  modifyItem: []
-  deleteItem: []
-  entryExhibition: []
-}>()
-
-const activeItem = ref<string | null>(null)
-
-const entryItem = () => {
-  activeItem.value = 'entry'
-  emit('entryItem')
-}
-
-const modifyItem = () => {
-  activeItem.value = 'modify'
-  emit('modifyItem')
-}
-
-const deleteItem = () => {
-  activeItem.value = 'delete'
-  emit('deleteItem')
-}
-
-const entryExhibition = () => {
-  activeItem.value = 'exhibition'
-  emit('entryExhibition')
-}
+<script>
+  import consts from '../../mixins/consts'
+  export default {
+    props: {
+      activeIdx: Number
+    },
+    data () {
+      return {
+        activeIndex: String(this.activeIdx),
+        version: ''
+      }
+    },
+    mounted () {
+      this.activeIndex = String(this.activeIdx)
+      this.version = consts.version
+    },
+    methods: {
+      showSetting (index) {
+        // 表示が違う場合
+        if (index !== this.activeIndex) {
+          switch (index) {
+            case '1':
+              this.$router.push('/license')
+              break
+            case '2':
+              this.$router.push('/account')
+              break
+            case '3':
+              this.$router.push('/entryInterval')
+              break
+            case '4':
+              this.$router.push('/imagePath')
+              break
+            case '5':
+              this.$router.push('/transferData')
+              break
+            default:
+              break
+          }
+        }
+      }
+    }
+  }
 </script>
 
 <style scoped>
@@ -123,22 +135,6 @@ const entryExhibition = () => {
   bottom: 0;
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
   pointer-events: none;
-}
-
-.sidebar-header {
-  padding: 24px 20px 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  position: relative;
-  z-index: 2;
-}
-
-.sidebar-title {
-  color: #1e293b;
-  font-size: 18px;
-  font-weight: 600;
-  margin: 0;
-  font-family: 'Inter', sans-serif;
-  text-shadow: none;
 }
 
 .sidebar-nav {
@@ -206,16 +202,6 @@ const entryExhibition = () => {
   background: linear-gradient(135deg, #3498db, #2ecc71);
   box-shadow: 0 4px 16px rgba(52, 152, 219, 0.3);
   transform: translateX(4px);
-}
-
-.nav-item.danger:hover {
-  background: rgba(231, 76, 60, 0.2);
-  border-color: rgba(231, 76, 60, 0.3);
-}
-
-.nav-item.danger.active {
-  background: linear-gradient(135deg, #e74c3c, #c0392b);
-  box-shadow: 0 4px 16px rgba(231, 76, 60, 0.3);
 }
 
 .nav-icon {
@@ -329,4 +315,3 @@ const entryExhibition = () => {
   }
 }
 </style>
-

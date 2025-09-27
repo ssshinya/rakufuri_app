@@ -2,13 +2,13 @@
   <el-header class="modern-header">
     <div class="header-container">
       <div class="logo-section">
-        <h1 class="app-title">ラクフリ</h1>
+        <h1 class="app-title">らくらくフリマ</h1>
       </div>
       
       <div class="tabs-section">
         <div class="tab-nav">
           <div 
-            v-for="(tab, index) in tabs" 
+            v-for="tab in tabs" 
             :key="tab.id"
             :class="['tab-item', { 'active': activeIndex === String(tab.id) }]"
             @click="handleSelect(String(tab.id))"
@@ -19,8 +19,8 @@
         </div>
       </div>
       
-      <div class="search-section" v-if="filterFlg">
-        <div class="search-container">
+      <div class="search-section">
+        <div class="search-container" v-if="filterFlg">
           <el-input 
             v-model="filter" 
             placeholder="絞り込み検索..." 
@@ -34,6 +34,7 @@
             </template>
           </el-input>
         </div>
+        <div v-else class="search-placeholder"></div>
       </div>
     </div>
   </el-header>
@@ -86,19 +87,19 @@ const handleSelect = (key: string) => {
   if (key !== activeIndex.value || (route.name !== 'items' && route.name !== 'exhibition' && route.name !== 'onsale' && route.name !== 'trading' && route.name !== 'license')) {
     switch (key) {
       case '1':
-        router.push('items')
+        router.push('/items')
         break
       case '2':
-        router.push('exhibition')
+        router.push('/exhibition')
         break
       case '3':
-        router.push('onsale')
+        router.push('/onsale')
         break
       case '4':
-        router.push('trading')
+        router.push('/trading')
         break
       case '5':
-        router.push('license')
+        router.push('/license')
         break
       default:
         break
@@ -153,6 +154,12 @@ const doFilter = () => {
   display: flex;
   justify-content: center;
   margin: 0 40px;
+}
+
+/* 検索窓のプレースホルダー */
+.search-placeholder {
+  width: 280px;
+  height: 40px;
 }
 
 .tab-nav {
