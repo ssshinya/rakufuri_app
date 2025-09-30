@@ -81,16 +81,6 @@ onMounted(() => {
   console.log('itemData:', itemData.value)
   console.log('total:', total.value)
   
-  // デバッグ用：DOM要素の確認
-  setTimeout(() => {
-    const table = document.querySelector('.el-table')
-    if (table) {
-      console.log('Table found:', table)
-      console.log('Table width:', table.offsetWidth)
-    } else {
-      console.log('Table not found')
-    }
-  }, 1000)
 })
 
 // メソッド

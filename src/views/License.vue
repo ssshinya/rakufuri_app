@@ -39,7 +39,7 @@
     components: {Header, SideMenu},
     mixins: [ consts ],
     created () {
-      this.constDB = util.getDatastore('const.db')
+      this.constDB = util.getDatastore('const')
       this.checkToken()
     },
     data () {
@@ -82,7 +82,7 @@
           if (valid) {
             var assistantApi = new AssistantApi()
             // ライセンス認証
-            assistantApi.getToken(this.$refs['licenseForm'].model['email'], this.$refs['licenseForm'].model['password'], this.doneGetToken)
+            assistantApi.getToken(this.licenseForm.email, this.licenseForm.password, this.doneGetToken)
           } else {
             util.showErrorBox('入力内容に不備があります')
             return false
@@ -91,41 +91,70 @@
       },
       // Token取得後
       async doneGetToken (json) {
-        // token取得
-        if (json.result === consts.api_token_ok) {
-          // 認証OK、最終チェック日を入れる
-          // ライセンスキーを設定
-          var lisence = await this.constDB.findOne({name: consts.const_lisence_key})
-          var now = new Date()
-          if (lisence) {
-            await this.constDB.update({_id: lisence._id}, {$set: {value: now.toFormat('YYYY-MM-DD HH24:MI:SS')}})
+        try{
+          console.log('doneGetToken json:', json)
+          // token取得
+          console.log('doneGetToken json.result:', json.result)
+          if (json.result === consts.api_token_ok) {
+            // 認証OK、最終チェック日を入れる
+            // ライセンスキーを設定
+            console.log('🔧 Step 1: Finding license key...')
+            var lisence = await this.constDB.findOne({name: consts.const_lisence_key})
+            console.log('doneGetToken lisence:', lisence)
+            var now = new Date()
+            if (lisence) {
+              console.log('🔧 Step 1: Updating existing license key...')
+              const updateResult = await this.constDB.update({_id: lisence._id}, {$set: {value: now.toFormat('YYYY-MM-DD HH24:MI:SS')}})
+              console.log('✅ Step 1: License key update result:', updateResult)
+            } else {
+              console.log('🔧 Step 1: Inserting new license key...')
+              const insertResult = await this.constDB.insert({name: consts.const_lisence_key, value: now.toFormat('YYYY-MM-DD HH24:MI:SS')})
+              console.log('✅ Step 1: License key insert result:', insertResult)
+            }
+            // ラクフリTokenを設定
+            console.log('🔧 Step 2: Finding assistant token...')
+            console.log('🔍 Debug: consts.const_assistant_token =', consts.const_assistant_token)
+            console.log('🔍 Debug: json.token =', json.token)
+            console.log('🔍 Debug: json.token type =', typeof json.token)
+            
+            var token = await this.constDB.findOne({name: consts.const_assistant_token})
+            console.log('🔍 Debug: existing token =', token)
+            
+            // json.tokenを文字列に変換（オブジェクトの場合はJSON文字列化）
+            const tokenValue = typeof json.token === 'string' ? json.token : JSON.stringify(json.token)
+            console.log('🔍 Debug: tokenValue =', tokenValue)
+            console.log('🔍 Debug: tokenValue type =', typeof tokenValue)
+            
+            if (token) {
+              console.log('🔧 Step 2: Updating existing token...')
+              const updateResult = await this.constDB.update({_id: token._id}, {$set: {value: tokenValue}})
+              console.log('✅ Step 2: Token update result:', updateResult)
+            } else {
+              console.log('🔧 Step 2: Inserting new token...')
+              const insertResult = await this.constDB.insert({name: consts.const_assistant_token, value: tokenValue})
+              console.log('✅ Step 2: Token insert result:', insertResult)
+            }
+            
+            // ライセンス認証（Deluxeを確認）
+            var lflg = await util.checkLicense()
+            if (!lflg) {
+              var t = await this.constDB.findOne({name: consts.const_assistant_token})
+              await this.constDB.remove({_id: t._id})
+              this.hiddenLicense()
+              return
+            }
+            this.doneLicense()
+          } else if (json.result === consts.api_token_ng) {
+            util.showErrorBox('利用できません')
+          } else if (json.result === consts.api_token_non_user) {
+            util.showErrorBox('メールアドレスかパスワードが間違っています')
+          } else if (json.result === consts.api_token_duplication) {
+            util.showErrorBox('他のパソコンでの利用を検知しました')
           } else {
-            await this.constDB.insert({name: consts.const_lisence_key, value: now.toFormat('YYYY-MM-DD HH24:MI:SS')})
+            util.showErrorBox('利用できません')
           }
-          // ラクフリTokenを設定
-          var token = await this.constDB.findOne({name: consts.const_assistant_token})
-          if (token) {
-            await this.constDB.update({_id: token._id}, {$set: {value: json.token}})
-          } else {
-            await this.constDB.insert({name: consts.const_assistant_token, value: json.token})
-          }
-          // ライセンス認証（Deluxeを確認）
-          var lflg = await util.checkLicense()
-          if (!lflg) {
-            var t = await this.constDB.findOne({name: consts.const_assistant_token})
-            await this.constDB.remove({_id: t._id})
-            this.hiddenLicense()
-            return
-          }
-          this.doneLicense()
-        } else if (json.result === consts.api_token_ng) {
-          util.showErrorBox('利用できません')
-        } else if (json.result === consts.api_token_non_user) {
-          util.showErrorBox('メールアドレスかパスワードが間違っています')
-        } else if (json.result === consts.api_token_duplication) {
-          util.showErrorBox('他のパソコンでの利用を検知しました')
-        } else {
-          util.showErrorBox('利用できません')
+        }catch(e){
+          // Error in doneGetToken
         }
       },
       doneLicense () {

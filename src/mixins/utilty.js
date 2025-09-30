@@ -1,59 +1,100 @@
-// import consts from './consts'
-// import { AssistantApi } from './assistantApi'
+import consts from './consts'
+import { AssistantApi } from './assistantApi'
 // import { RakumaApi } from './rakumaApi'
 // import { PaypayApi } from './paypayApi'
 // import { Log } from './log'
 // import { remote } from 'electron'
-// import datastore from 'nedb-promise'
+import { getDatastore as getSQLiteDatastore } from './sqliteWrapper'
 // require('date-utils')
 // const fs = require('fs')
 // const dialog = require('electron').remote.dialog
 
 // 情報ダイアログ
 function showInfoBox (message) {
-  // var win = remote.getCurrentWindow()
-  // var options = {
-  //   type: 'info',
-  //   buttons: ['OK'],
-  //   title: '情報',
-  //   message: message,
-  //   detail: ''
-  // }
-  // dialog.showMessageBox(win, options)
-  console.log('Info:', message)
+  try {
+    // 一時的にalertのみを使用（デバッグ用）
+    console.log('showInfoBox called with message:', message)
+    alert(message)
+    
+    // TODO: Electron環境でのダイアログ表示を実装
+  } catch (error) {
+    console.error('showInfoBox error:', error)
+    alert(message)
+  }
 }
 // エラーダイアログ
 function showErrorBox (message) {
-  // var win = remote.getCurrentWindow()
-  // var options = {
-  //   type: 'warning',
-  //   buttons: ['OK'],
-  //   title: 'エラー',
-  //   message: message,
-  //   detail: ''
-  // }
-  // dialog.showMessageBox(win, options)
-  console.error('Error:', message)
+  try {
+    // 一時的にalertのみを使用（デバッグ用）
+    console.log('showErrorBox called with message:', message)
+    alert('エラー: ' + message)
+    
+    // TODO: Electron環境でのダイアログ表示を実装
+    // if (typeof window !== 'undefined' && window.require) {
+    //   const electron = window.require('electron')
+    //   if (electron && electron.dialog) {
+    //     electron.dialog.showMessageBox(null, {
+    //       type: 'warning',
+    //       buttons: ['OK'],
+    //       title: 'エラー',
+    //       message: message
+    //     })
+    //   } else {
+    //     alert('エラー: ' + message)
+    //   }
+    // } else {
+    //   alert('エラー: ' + message)
+    // }
+  } catch (error) {
+    console.error('showErrorBox error:', error)
+    alert('エラー: ' + message)
+  }
 }
 // システムエラー
 function showSystemErrorBox () {
-  // var win = remote.getCurrentWindow()
-  // var options = {
-  //   type: 'warning',
-  //   buttons: ['OK'],
-  //   title: 'エラー',
-  //   message: 'エラーが発生しました。システム管理者にお問い合わせください。',
-  //   detail: ''
-  // }
-  // dialog.showMessageBox(win, options)
-  console.error('System Error: エラーが発生しました。システム管理者にお問い合わせください。')
+  try {
+    // Electron環境でのダイアログ表示
+    if (typeof window !== 'undefined' && window.require) {
+      const { dialog } = window.require('electron')
+      const options = {
+        type: 'warning',
+        buttons: ['OK'],
+        title: 'エラー',
+        message: 'エラーが発生しました。システム管理者にお問い合わせください。',
+        detail: ''
+      }
+      // 非同期でダイアログを表示
+      dialog.showMessageBox(null, options).catch(error => {
+        console.error('Dialog error:', error)
+        // フォールバック: アラート表示
+        alert('エラー: エラーが発生しました。システム管理者にお問い合わせください。')
+      })
+    } else {
+      // ブラウザ環境ではアラート表示
+      alert('エラー: エラーが発生しました。システム管理者にお問い合わせください。')
+    }
+  } catch (error) {
+    console.error('showSystemErrorBox error:', error)
+    // フォールバック: アラート表示
+    alert('エラー: エラーが発生しました。システム管理者にお問い合わせください。')
+  }
 }
 
 // Datasorceを取得
 function getDatastore (table) {
-  // return datastore({filename: table, autoload: true})
-  console.log('getDatastore called for:', table)
-  return null
+  try {
+    return getSQLiteDatastore(table)
+  } catch (error) {
+    console.error('Failed to get datastore for table:', table, error)
+    // フォールバック: モックオブジェクトを返す
+    return {
+      findOne: async () => null,
+      find: async () => [],
+      insert: async () => null,
+      update: async () => ({ modifiedCount: 0 }),
+      remove: async () => ({ deletedCount: 0 })
+    }
+  }
 }
 
 // フラグを初期化します
@@ -95,76 +136,88 @@ function checkReadExcel () {
 
 // ライセンスチェック
 async function checkLicense (parent, callback) {
-  // var constDB = this.getDatastore('const.db')
-  // var token = await constDB.findOne({name: consts.const_assistant_token})
-  var result = false
-  // if (token) {
-  //   result = true
-  //   // 再度ライセンス認証をする
-  //   var assistantApi = new AssistantApi()
-  //   await assistantApi.checkLicense(token.value, (json) => {
-  //     switch (json.result) {
-  //       // 体験版
-  //       case 0 :
-  //         // 体験版フラグをtrueへ
-  //         this.setFlg('testingFlg', 'true')
-  //         break
-  //       // Rakuma
-  //       case 1 :
-  //         // 体験版フラグをfalseへ
-  //         this.setFlg('testingFlg', 'false')
-  //         break
-  //       // Gold
-  //       case 6 :
-  //         alert('利用できません')
-  //         result = false
-  //         break
-  //       // Paypay
-  //       case 8 :
-  //         // 体験版フラグをfalseへ
-  //         this.setFlg('testingFlg', 'false')
-  //         break
-  //       // Deluxe
-  //       case 7 :
-  //         // 体験版フラグをfalseへ
-  //         this.setFlg('testingFlg', 'false')
-  //         break
-  //       // 入金待ち
-  //       case 2 :
-  //         alert('入金待ちです')
-  //         result = false
-  //         break
-  //       // 利用停止
-  //       case 3 :
-  //         alert('利用できません')
-  //         result = false
-  //         break
-  //       // PC重複
-  //       case 4 :
-  //         alert('他のパソコンでの利用を検知しました')
-  //         result = false
-  //         break
-  //       // 利用者なし
-  //       case 5 :
-  //         alert('利用できません')
-  //         result = false
-  //         break
-  //       // その他
-  //       default :
-  //         alert('利用できません')
-  //         result = false
-  //         break
-  //     }
-  //   })
-  // } else {
-  //   alert('ライセンス認証をしてください')
-  //   parent.$router.push({path: 'license'})
-  // }
-  console.log('checkLicense called')
-  if (callback) {
-    callback(result)
-  } else {
-    return result
+  try {
+    var constDB = getDatastore('const')
+    var token = await constDB.findOne({name: consts.const_assistant_token})
+    var result = false
+    console.log()
+    if (token) {
+      result = true
+      // 再度ライセンス認証をする
+      var assistantApi = new AssistantApi()
+      await assistantApi.checkLicense(token.value, (json) => {
+        switch (json.result) {
+          // 体験版
+          case 0 :
+            // 体験版フラグをtrueへ
+            setFlg('testingFlg', 'true')
+            break
+          // Rakuma
+          case 1 :
+            // 体験版フラグをfalseへ
+            setFlg('testingFlg', 'false')
+            break
+          // Gold
+          case 6 :
+            alert('利用できません')
+            result = false
+            break
+          // Paypay
+          case 8 :
+            // 体験版フラグをfalseへ
+            setFlg('testingFlg', 'false')
+            break
+          // Deluxe
+          case 7 :
+            // 体験版フラグをfalseへ
+            setFlg('testingFlg', 'false')
+            break
+          // 入金待ち
+          case 2 :
+            alert('入金待ちです')
+            result = false
+            break
+          // 利用停止
+          case 3 :
+            alert('利用できません')
+            result = false
+            break
+          // PC重複
+          case 4 :
+            alert('他のパソコンでの利用を検知しました')
+            result = false
+            break
+          // 利用者なし
+          case 5 :
+            alert('利用できません')
+            result = false
+            break
+          // その他
+          default :
+            alert('利用できません')
+            result = false
+            break
+        }
+      })
+    } else {
+      console.log('No license token found')
+      result = false
+    }
+    
+    console.log('checkLicense result:', result)
+    if (callback) {
+      callback(result)
+    } else {
+      return result
+    }
+  } catch (error) {
+    console.error('checkLicense error:', error)
+    const result = false
+    if (callback) {
+      callback(result)
+    } else {
+      return result
+    }
   }
 }
 // サイトライセンスチェック

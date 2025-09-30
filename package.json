@@ -3,9 +3,10 @@
   "private": true,
   "version": "3.7.0",
   "productName": "らくらくフリマ",
-  "type": "module",
   "scripts": {
     "dev": "vite",
+    "electron:dev": "vite --mode electron",
+    "electron:build": "vite build --mode electron",
     "build": "vue-tsc && vite build && electron-builder",
     "preview": "vite preview"
   },
@@ -14,6 +15,7 @@
     "axios": "^1.6.0",
     "date-utils": "^1.0.0",
     "element-plus": "^2.11.3",
+    "sqlite3": "^5.1.7",
     "vue": "^3.4.21",
     "vue-router": "^4.5.1"
   },

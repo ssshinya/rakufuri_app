@@ -173,14 +173,15 @@ const doFilter = () => {
 
 .tab-item {
   position: relative;
-  padding: 12px 24px;
+  padding: 12px 16px;
   margin: 0 2px;
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   user-select: none;
-  min-width: 80px;
+  min-width: 90px;
   text-align: center;
+  white-space: nowrap;
 }
 
 .tab-item:hover {
@@ -267,35 +268,21 @@ const doFilter = () => {
   }
   
   .app-title {
-    font-size: 20px;
+    font-size: 18px;
   }
   
   .tabs-section {
-    margin: 0 20px;
+    margin: 0 15px;
+  }
+  
+  .tab-nav {
+    padding: 2px;
   }
   
   .tab-item {
-    padding: 10px 16px;
-    min-width: 60px;
-  }
-  
-  .tab-text {
-    font-size: 12px;
-  }
-  
-  .search-input {
-    width: 200px;
-  }
-}
-
-@media (max-width: 480px) {
-  .tabs-section {
-    margin: 0 10px;
-  }
-  
-  .tab-item {
-    padding: 8px 12px;
-    min-width: 50px;
+    padding: 10px 8px;
+    min-width: 70px;
+    margin: 0 1px;
   }
   
   .tab-text {
@@ -303,7 +290,35 @@ const doFilter = () => {
   }
   
   .search-input {
-    width: 150px;
+    width: 180px;
+  }
+}
+
+@media (max-width: 480px) {
+  .app-title {
+    font-size: 16px;
+  }
+  
+  .tabs-section {
+    margin: 0 8px;
+  }
+  
+  .tab-nav {
+    padding: 1px;
+  }
+  
+  .tab-item {
+    padding: 8px 6px;
+    min-width: 60px;
+    margin: 0 1px;
+  }
+  
+  .tab-text {
+    font-size: 10px;
+  }
+  
+  .search-input {
+    width: 120px;
   }
 }
 </style>

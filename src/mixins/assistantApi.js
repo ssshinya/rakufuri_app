@@ -1,38 +1,19 @@
 import consts from './consts'
 import { Log } from './log'
-import axios from 'axios'
 
 // コンピューター名を取得する関数
 function getComputerName() {
-  // Electron環境でのみosモジュールを使用
-  if (typeof window !== 'undefined' && window.require) {
-    try {
-      const os = window.require('os')
-      return os.hostname()
-    } catch (e) {
-      console.warn('Failed to get hostname from os module:', e)
+  try {
+    // Electron環境ではpreloadスクリプト経由で取得
+    if (window.electronAPI && window.electronAPI.getAppName) {
+      return window.electronAPI.getAppName()
     }
-  } else if (typeof require !== 'undefined') {
-    try {
-      const os = require('os')
-      return os.hostname()
-    } catch (e) {
-      console.warn('Failed to get hostname from os module:', e)
-    }
+    // フォールバック: ブラウザ環境ではランダムな名前を生成
+    return 'browser-' + Math.random().toString(36).substr(2, 9)
+  } catch (e) {
+    console.warn('Failed to get computer name:', e)
+    return 'unknown'
   }
-  
-  // フォールバック: ブラウザ環境では一意の識別子を生成
-  if (typeof window !== 'undefined') {
-    // ローカルストレージから既存のIDを取得、なければ新規生成
-    let deviceId = localStorage.getItem('rakufuri-device-id')
-    if (!deviceId) {
-      deviceId = `device-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-      localStorage.setItem('rakufuri-device-id', deviceId)
-    }
-    return deviceId
-  }
-  
-  return 'unknown-device'
 }
 
 export class AssistantApi {
@@ -46,7 +27,7 @@ export class AssistantApi {
     var url = ''
     try {
       // コンピューター名
-      let computer = getComputerName()
+      let computer = await getComputerName()
       // 余分な空白を削除
       email = email.replace('　', '')
       email = email.replace(' ', '')
@@ -62,10 +43,25 @@ export class AssistantApi {
       let response = null
       let status = '200'
       try {
-        response = await axios.post(url, formData)
+        // Electron環境ではIPC経由でHTTPリクエストを送信
+        if (window.electronAPI && window.electronAPI.httpPost) {
+          response = await window.electronAPI.httpPost(url, formData)
+          if (response.success) {
+            status = response.status.toString()
+            response = { data: response.data }
+          } else {
+            status = response.status.toString()
+            this.log.request('access info:url->' + url + ' status->' + status)
+            return null
+          }
+        } else {
+          // ブラウザ環境では直接axiosを使用（CORSエラーの可能性あり）
+          const axios = (await import('axios')).default
+          response = await axios.post(url, formData)
+        }
         this.log.request('access info:url->' + url + ' status->' + status)
       } catch (err) {
-        status = err.response?.status || err.code
+        status = err.response?.status || err.code || '500'
         this.log.request('access info:url->' + url + ' status->' + status)
         return null
       }
@@ -92,7 +88,7 @@ export class AssistantApi {
     var url = ''
     try {
       // コンピューター名
-      let computer = getComputerName()
+      let computer = await getComputerName()
       // パラメータ設定
       let formData = {
         token: token,
@@ -104,10 +100,25 @@ export class AssistantApi {
       let response = null
       let status = '200'
       try {
-        response = await axios.post(url, formData)
+        // Electron環境ではIPC経由でHTTPリクエストを送信
+        if (window.electronAPI && window.electronAPI.httpPost) {
+          response = await window.electronAPI.httpPost(url, formData)
+          if (response.success) {
+            status = response.status.toString()
+            response = { data: response.data }
+          } else {
+            status = response.status.toString()
+            this.log.request('access info:url->' + url + ' status->' + status)
+            return null
+          }
+        } else {
+          // ブラウザ環境では直接axiosを使用（CORSエラーの可能性あり）
+          const axios = (await import('axios')).default
+          response = await axios.post(url, formData)
+        }
         this.log.request('access info:url->' + url + ' status->' + status)
       } catch (err) {
-        status = err.response?.status || err.code
+        status = err.response?.status || err.code || '500'
         this.log.request('access info:url->' + url + ' status->' + status)
         return null
       }
@@ -136,10 +147,25 @@ export class AssistantApi {
       let response = null
       let status = '200'
       try {
-        response = await axios.get(url)
+        // Electron環境ではIPC経由でHTTPリクエストを送信
+        if (window.electronAPI && window.electronAPI.httpGet) {
+          response = await window.electronAPI.httpGet(url)
+          if (response.success) {
+            status = response.status.toString()
+            response = { data: response.data }
+          } else {
+            status = response.status.toString()
+            this.log.request('access info:url->' + url + ' status->' + status)
+            return null
+          }
+        } else {
+          // ブラウザ環境では直接axiosを使用（CORSエラーの可能性あり）
+          const axios = (await import('axios')).default
+          response = await axios.get(url)
+        }
         this.log.request('access info:url->' + url + ' status->' + status)
       } catch (err) {
-        status = err.response?.status || err.code
+        status = err.response?.status || err.code || '500'
         this.log.request('access info:url->' + url + ' status->' + status)
         return null
       }
@@ -177,10 +203,25 @@ export class AssistantApi {
       let response = null
       let status = '200'
       try {
-        response = await axios.post(url, formData)
+        // Electron環境ではIPC経由でHTTPリクエストを送信
+        if (window.electronAPI && window.electronAPI.httpPost) {
+          response = await window.electronAPI.httpPost(url, formData)
+          if (response.success) {
+            status = response.status.toString()
+            response = { data: response.data }
+          } else {
+            status = response.status.toString()
+            this.log.request('access info:url->' + url + ' status->' + status)
+            return null
+          }
+        } else {
+          // ブラウザ環境では直接axiosを使用（CORSエラーの可能性あり）
+          const axios = (await import('axios')).default
+          response = await axios.post(url, formData)
+        }
         this.log.request('access info:url->' + url + ' status->' + status)
       } catch (err) {
-        status = err.response?.status || err.code
+        status = err.response?.status || err.code || '500'
         this.log.request('access info:url->' + url + ' status->' + status)
         return null
       }
