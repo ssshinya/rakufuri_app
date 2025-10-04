@@ -6,11 +6,26 @@ const fs = require('fs')
 const sqlite3 = require('sqlite3').verbose()
 const axios = require('axios')
 
+// sqlite3の型定義
+interface Database {
+  run(sql: string, params: any[], callback: (this: { lastID: number; changes: number }, err: Error | null) => void): void
+  get(sql: string, params: any[], callback: (err: Error | null, row: any) => void): void
+  all(sql: string, callback: (err: Error | null, rows: any[]) => void): void
+  exec(sql: string, callback: (err: Error | null) => void): void
+  close(): void
+}
+
+interface DatabaseConstructor {
+  new (filename: string, callback?: (err: Error | null) => void): Database
+}
+
+const Database = sqlite3.Database as DatabaseConstructor
+
 // アプリケーション名を設定（データ保存場所の決定に使用）
 app.setName('rakufuri_app')
 
 // データベースインスタンスの管理
-const dbInstances = new Map()
+const dbInstances = new Map<string, Database>()
 
 // データベースパス取得
 function getDbPath(tableName: string): string {
@@ -26,17 +41,20 @@ function getDbPath(tableName: string): string {
 }
 
 // データベースインスタンス取得または作成
-function getDatabase(tableName: string): Promise<sqlite3.Database> {
+function getDatabase(tableName: string): Promise<Database> {
   return new Promise((resolve, reject) => {
     if (dbInstances.has(tableName)) {
-      resolve(dbInstances.get(tableName))
-      return
+      const existingDb = dbInstances.get(tableName)
+      if (existingDb) {
+        resolve(existingDb)
+        return
+      }
     }
 
     const dbPath = getDbPath(tableName)
     console.log(`🔧 Creating SQLite database: ${dbPath}`)
     
-    const db = new sqlite3.Database(dbPath, (err) => {
+    const db = new Database(dbPath, (err: Error | null) => {
       if (err) {
         console.error(`❌ Error opening database: ${err.message}`)
         reject(err)
@@ -45,16 +63,16 @@ function getDatabase(tableName: string): Promise<sqlite3.Database> {
       
       console.log(`🔧 Database created successfully: ${dbPath}`)
       
-      // テーブル作成（NeDB風のドキュメント形式）
-      db.exec(`
-        CREATE TABLE IF NOT EXISTS ${tableName} (
-          _id INTEGER PRIMARY KEY AUTOINCREMENT,
-          key TEXT UNIQUE,
-          value TEXT,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-      `, (err) => {
+        // テーブル作成（NeDB風のドキュメント形式）
+        db.exec(`
+          CREATE TABLE IF NOT EXISTS ${tableName} (
+            _id INTEGER PRIMARY KEY AUTOINCREMENT,
+            key TEXT UNIQUE,
+            value TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          )
+        `, (err: Error | null) => {
         if (err) {
           console.error(`❌ Error creating table: ${err.message}`)
           reject(err)
@@ -64,7 +82,7 @@ function getDatabase(tableName: string): Promise<sqlite3.Database> {
         // インデックス作成
         db.exec(`
           CREATE INDEX IF NOT EXISTS idx_${tableName}_key ON ${tableName}(key)
-        `, (err) => {
+        `, (err: Error | null) => {
           if (err) {
             console.error(`❌ Error creating index: ${err.message}`)
             reject(err)
@@ -81,7 +99,7 @@ function getDatabase(tableName: string): Promise<sqlite3.Database> {
 }
 
 // 行データをパース（NeDB形式に変換）
-function parseRow(row: any) {
+function parseRow(row: any): any {
   try {
     const doc = JSON.parse(row.value)
     doc._id = row._id
@@ -178,12 +196,16 @@ ipcMain.handle('get-app-name', () => {
   return app.getName()
 })
 
+ipcMain.handle('get-computer-name', () => {
+  return require('os').hostname()
+})
+
 // データベース操作のIPCハンドラー
 ipcMain.handle('db-find-one', async (_event: any, tableName: string, query: any) => {
   try {
     const db = await getDatabase(tableName)
     
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       let sql = `SELECT * FROM ${tableName} WHERE 1=1`
       const params = []
       
@@ -195,7 +217,7 @@ ipcMain.handle('db-find-one', async (_event: any, tableName: string, query: any)
         params.push(query.name)
       } else {
         // その他のクエリ条件はJSON検索で実装
-        db.all(`SELECT * FROM ${tableName}`, (err, rows) => {
+        db.all(`SELECT * FROM ${tableName}`, (err: Error | null, rows: any[]) => {
           if (err) {
             console.error('db-find-one error:', err)
             resolve(null)
@@ -215,7 +237,7 @@ ipcMain.handle('db-find-one', async (_event: any, tableName: string, query: any)
         return
       }
       
-      db.get(sql, params, (err, row) => {
+      db.get(sql, params, (err: Error | null, row: any) => {
         if (err) {
           console.error('db-find-one error:', err)
           resolve(null)
@@ -234,8 +256,8 @@ ipcMain.handle('db-find', async (_event: any, tableName: string, query: any = {}
   try {
     const db = await getDatabase(tableName)
     
-    return new Promise((resolve, reject) => {
-      db.all(`SELECT * FROM ${tableName}`, (err, rows) => {
+    return new Promise((resolve) => {
+      db.all(`SELECT * FROM ${tableName}`, (err: Error | null, rows: any[]) => {
         if (err) {
           console.error('db-find error:', err)
           resolve([])
@@ -264,13 +286,13 @@ ipcMain.handle('db-insert', async (_event: any, tableName: string, doc: any) => 
     const key = doc.name || doc._id || Date.now().toString()
     const value = JSON.stringify(doc)
     
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       const sql = `
         INSERT INTO ${tableName} (key, value, created_at, updated_at) 
         VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
       `
       
-      db.run(sql, [key, value], function(err) {
+      db.run(sql, [key, value], function(this: { lastID: number; changes: number }, err: Error | null) {
         if (err) {
           console.error('db-insert error:', err)
           resolve(null)
@@ -291,7 +313,7 @@ ipcMain.handle('db-update', async (_event: any, tableName: string, query: any, u
   try {
     const db = await getDatabase(tableName)
     
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       db.all(`SELECT * FROM ${tableName}`, (err, rows) => {
         if (err) {
           console.error('db-update error:', err)
@@ -329,7 +351,7 @@ ipcMain.handle('db-update', async (_event: any, tableName: string, query: any, u
             db.run(`
               UPDATE ${tableName} SET value = ?, updated_at = CURRENT_TIMESTAMP 
               WHERE _id = ?
-            `, [JSON.stringify(doc), row._id], function(err) {
+            `, [JSON.stringify(doc), row._id], function(this: { lastID: number; changes: number }, err: Error | null) {
               if (err) {
                 console.error('db-update error:', err)
               } else {
@@ -360,9 +382,9 @@ ipcMain.handle('db-remove', async (_event: any, tableName: string, query: any) =
   try {
     const db = await getDatabase(tableName)
     
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       if (query._id) {
-        db.run(`DELETE FROM ${tableName} WHERE _id = ?`, [query._id], function(err) {
+        db.run(`DELETE FROM ${tableName} WHERE _id = ?`, [query._id], function(this: { lastID: number; changes: number }, err: Error | null) {
           if (err) {
             console.error('db-remove error:', err)
             resolve({ deletedCount: 0 })
@@ -371,7 +393,7 @@ ipcMain.handle('db-remove', async (_event: any, tableName: string, query: any) =
           resolve({ deletedCount: this.changes })
         })
       } else if (query.name) {
-        db.run(`DELETE FROM ${tableName} WHERE key = ?`, [query.name], function(err) {
+        db.run(`DELETE FROM ${tableName} WHERE key = ?`, [query.name], function(this: { lastID: number; changes: number }, err: Error | null) {
           if (err) {
             console.error('db-remove error:', err)
             resolve({ deletedCount: 0 })
@@ -381,7 +403,7 @@ ipcMain.handle('db-remove', async (_event: any, tableName: string, query: any) =
         })
       } else {
         // 複雑なクエリの場合は全件検索
-        db.all(`SELECT * FROM ${tableName}`, (err, rows) => {
+        db.all(`SELECT * FROM ${tableName}`, (err: Error | null, rows: any[]) => {
           if (err) {
             console.error('db-remove error:', err)
             resolve({ deletedCount: 0 })
@@ -403,7 +425,7 @@ ipcMain.handle('db-remove', async (_event: any, tableName: string, query: any) =
           let totalDeleted = 0
           
           idsToDelete.forEach((id: number) => {
-            db.run(`DELETE FROM ${tableName} WHERE _id = ?`, [id], function(err) {
+            db.run(`DELETE FROM ${tableName} WHERE _id = ?`, [id], function(this: { lastID: number; changes: number }, err: Error | null) {
               if (err) {
                 console.error('db-remove error:', err)
               } else {
@@ -430,9 +452,11 @@ ipcMain.handle('db-close', async (_event: any, tableName: string) => {
   try {
     if (dbInstances.has(tableName)) {
       const db = dbInstances.get(tableName)
-      db.close()
-      dbInstances.delete(tableName)
-      console.log(`✅ Database ${tableName} closed successfully`)
+      if (db) {
+        db.close()
+        dbInstances.delete(tableName)
+        console.log(`✅ Database ${tableName} closed successfully`)
+      }
     }
     return true
   } catch (error) {
@@ -447,8 +471,10 @@ ipcMain.handle('db-close-all', async () => {
     console.log('🔄 Closing all databases...')
     dbInstances.forEach((db, tableName) => {
       try {
-        db.close()
-        console.log(`✅ Database ${tableName} closed`)
+        if (db) {
+          db.close()
+          console.log(`✅ Database ${tableName} closed`)
+        }
       } catch (error) {
         console.error(`❌ Error closing database ${tableName}:`, error)
       }
@@ -472,7 +498,7 @@ ipcMain.handle('db-upsert', async (_event: any, tableName: string, doc: any) => 
     
     console.log(`🔧 UPSERT params: key=${key}, value=${value}`)
 
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       const sql = `
         INSERT INTO ${tableName} (key, value, created_at, updated_at)
         VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
@@ -481,7 +507,7 @@ ipcMain.handle('db-upsert', async (_event: any, tableName: string, doc: any) => 
           updated_at = CURRENT_TIMESTAMP
       `
       
-      db.run(sql, [key, value], function(err) {
+      db.run(sql, [key, value], function(this: { lastID: number; changes: number }, err: Error | null) {
         if (err) {
           console.error('db-upsert error:', err)
           resolve(null)
@@ -552,8 +578,10 @@ app.on('before-quit', () => {
   // メインプロセスで直接データベースを閉じる
   dbInstances.forEach((db, tableName) => {
     try {
-      db.close()
-      console.log(`✅ Database ${tableName} closed`)
+      if (db) {
+        db.close()
+        console.log(`✅ Database ${tableName} closed`)
+      }
     } catch (error) {
       console.error(`❌ Error closing database ${tableName}:`, error)
     }
@@ -567,8 +595,10 @@ app.on('window-all-closed', () => {
   // メインプロセスで直接データベースを閉じる
   dbInstances.forEach((db, tableName) => {
     try {
-      db.close()
-      console.log(`✅ Database ${tableName} closed`)
+      if (db) {
+        db.close()
+        console.log(`✅ Database ${tableName} closed`)
+      }
     } catch (error) {
       console.error(`❌ Error closing database ${tableName}:`, error)
     }

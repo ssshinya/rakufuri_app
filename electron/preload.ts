@@ -36,6 +36,7 @@ const electronAPI = {
   },
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
   getAppName: () => ipcRenderer.invoke('get-app-name'),
+  getComputerName: () => ipcRenderer.invoke('get-computer-name'),
   
   // データベース操作API
   dbFindOne: (tableName: string, query: any) => ipcRenderer.invoke('db-find-one', tableName, query),

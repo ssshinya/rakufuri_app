@@ -157,17 +157,4 @@ const doDelete = () => {
   width:100%;
 }
 
-/* デバッグ用スタイル */
-.itemList {
-  border: 2px solid red; /* テーブルコンテナの境界を確認 */
-}
-
-.el-table {
-  border: 2px solid blue; /* テーブル自体の境界を確認 */
-}
-
-.el-table th {
-  background-color: #f0f0f0; /* ヘッダーの背景色を確認 */
-  border: 1px solid #ccc; /* ヘッダーの境界を確認 */
-}
 </style>
