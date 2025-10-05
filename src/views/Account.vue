@@ -68,7 +68,6 @@
     import SideMenu from '@/components/side_menu/Setting.vue'
     import consts from '../mixins/consts'
     import util from '../mixins/utilty'
-    import { SQLiteWrapper } from '../mixins/sqliteWrapper'
     export default {
       components: {Header, SideMenu},
       mixins: [ consts ],
@@ -90,8 +89,8 @@
         this.activeIndex = String(this.activeIdx)
       },
       created () {
-        this.accountDB = new SQLiteWrapper('account')
-        this.exhibitionDB = new SQLiteWrapper('exhibition')
+        this.accountDB = util.getDatastore('account')
+        this.exhibitionDB = util.getDatastore('exhibition')
         this.init()
       },
       methods: {

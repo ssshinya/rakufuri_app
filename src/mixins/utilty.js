@@ -222,37 +222,48 @@ async function checkLicense (parent, callback) {
 }
 // サイトライセンスチェック
 async function checkSiteLicense (parent, site, callback) {
-  // var constDB = this.getDatastore('const.db')
-  // var token = await constDB.findOne({name: consts.const_assistant_token})
-  var result = null
-  // if (token) {
-  //   // 再度ライセンス認証をする
-  //   var assistantApi = new AssistantApi()
-  //   await assistantApi.checkLicense(token.value, (json) => {
-  //     if (json.result === 0 ) {
-  //       result = true
-  //     } else if (site === 'r' && json.result === 1) {
-  //       result = true
-  //     } else if (site === 'p' && json.result === 8) {
-  //       result = true
-  //     } else if (json.result === 7) {
-  //       result = true
-  //     }
-  //   })
-  // } else {
-  //   alert('ライセンス認証をしてください')
-  //   parent.$router.push({path: 'license'})
-  // }
-  console.log('checkSiteLicense called for site:', site)
-  if (callback) {
-    callback(result)
-  } else {
-    return result
+  try {
+    var constDB = getSQLiteDatastore('const')
+    var token = await constDB.findOne({name: consts.const_assistant_token})
+    var result = false // デフォルトをfalseに
+    
+    if (token) {
+      var assistantApi = new AssistantApi()
+      var json = await assistantApi.checkLicense(token.value)
+      
+      if (json && json.result !== undefined) {
+        if (json.result === 0 || json.result === 7) {
+          result = true // 全サイト利用可能
+        } else if (site === 'r' && json.result === 1) {
+          result = true // ラクマのみ
+        } else if (site === 'p' && json.result === 8) {
+          result = true // PayPayのみ
+        }
+      }
+    } else {
+      alert('ライセンス認証をしてください')
+      parent.$router.push({path: '/license'})
+    }
+    
+    console.log('checkSiteLicense called for site:', site, 'result:', result)
+    if (callback) {
+      callback(result)
+    } else {
+      return result
+    }
+  } catch (error) {
+    console.error('checkSiteLicense error:', error)
+    var result = false
+    if (callback) {
+      callback(result)
+    } else {
+      return result
+    }
   }
 }
 // ライセンスチェック
 async function checkGold (parent, callback) {
-  // var constDB = this.getDatastore('const.db')
+  // var constDB = this.getDatastore('const')
   // var token = await constDB.findOne({name: consts.const_assistant_token})
   var result = false
   // if (token) {
@@ -307,7 +318,7 @@ async function getAccount (accountId) {
 // 体験版チェック
 async function checkTrialCount (count, updateFlg, callback) {
   // tokenを取得
-  // var constDB = this.getDatastore('const.db')
+  // var constDB = this.getDatastore('const')
   // var token = await constDB.findOne({name: consts.const_assistant_token})
   // if (!token) {
   //   return null

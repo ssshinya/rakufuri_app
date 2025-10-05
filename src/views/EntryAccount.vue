@@ -15,7 +15,7 @@
           <el-form-item label="ID" prop="email">
             <el-input v-model="addAccountForm.email"></el-input>
           </el-form-item>
-          <el-form-item id="password" label="パスワード" prop="password">
+          <el-form-item id="password" label="パスワード" prop="password" v-show="showPassword">
             <el-input v-model="addAccountForm.password" type="password"></el-input>
           </el-form-item>
           <el-form-item class="center-button">
@@ -86,6 +86,7 @@
           modifyAccount: null,
           rakumaApi: null,
           paypayApi: null,
+          showPassword: true,
           // アカウントForm
           addAccountForm: {
             site: '',
@@ -162,14 +163,14 @@
             var result = await this.accountDB.findOne(query)
             this.modifyAccount = result
             // データを入れる
-            this.$refs['addAccountForm'].model['email'] = this.modifyAccount.email
+            this.addAccountForm.email = this.modifyAccount.email
             const site = this.modifyAccount.site
             if (!site) {
-              this.$refs['addAccountForm'].model['site'] = '0'
+              this.addAccountForm.site = '0'
             } else if(site=='r') {
-              this.$refs['addAccountForm'].model['site'] = '0'
+              this.addAccountForm.site = '0'
             } else if(site=='p') {
-              this.$refs['addAccountForm'].model['site'] = '1'
+              this.addAccountForm.site = '1'
             }
             this.changeSite()
           } else {
@@ -179,28 +180,39 @@
         },
         // サイト変更
         async changeSite () {
-          // サイト取得
-          var site = this.$refs['addAccountForm'].model['site']
-          // サイト判定
-          if (site === '0'){
-            let result = await util.checkSiteLicense(this, 'r')
-            if (!result) {
-              util.showErrorBox('ラクマのアカウントは追加できません')
-              this.$refs['addAccountForm'].model['site'] = null
-              return
+          try {
+            // サイト取得
+            var site = this.addAccountForm.site
+            // サイト判定
+            if (site === '0'){
+              let result = await util.checkSiteLicense(this, 'r')
+              if (!result) {
+                util.showErrorBox('ラクマのアカウントは追加できません')
+                this.addAccountForm.site = ''
+                return
+              }
+              // ラクマ
+              this.showPassword = true
+              // パスワードルールを復元
+              this.addAccountRules.password = [
+                { required: true, message: 'パスワードを入力してください', trigger: 'change' }
+              ]
+            } else {
+              // paypay
+              let result = await util.checkSiteLicense(this, 'p')
+              if (!result) {
+                util.showErrorBox('PayPayのアカウントは追加できません')
+                this.addAccountForm.site = ''
+                return
+              }
+              this.showPassword = false
+              delete this.addAccountRules.password
             }
-            // ラクマ
-            util.showDom('password', 'block')
-          } else {
-            // paypay
-            let result = await util.checkSiteLicense(this, 'p')
-            if (!result) {
-              util.showErrorBox('PayPayのアカウントは追加できません')
-              this.$refs['addAccountForm'].model['site'] = null
-              return
-            }
-            util.noneDom('password')
-            delete this.addAccountRules.password
+          } catch (error) {
+            console.error('changeSite error:', error)
+            var log = new Log()
+            log.error(error)
+            util.showSystemErrorBox()
           }
         },
         // submit
@@ -217,12 +229,12 @@
                 // ローディング
                 util.showDom('loading')
                 // サイト取得
-                var site = this.$refs['addAccountForm'].model['site']
+                var site = this.addAccountForm.site
                 // サイト判定
                 if (site === '0'){
                   // ラクマ
                   // アカウント認証
-                  this.accountData = await this.rakumaApi.login(this.$refs['addAccountForm'].model['email'], this.$refs['addAccountForm'].model['password'])
+                  this.accountData = await this.rakumaApi.login(this.addAccountForm.email, this.addAccountForm.password)
                   // ログイン結果取得
                   if (this.accountData) {
                     util.showInfoBox(this.accountData.message)
@@ -235,7 +247,7 @@
                 } else if (site === '1') {
                   // paypay
                   // アカウント認証
-                  this.accountData = await this.paypayApi.login(this.$refs['addAccountForm'].model['email'], this.$refs['addAccountForm'].model['password'])
+                  this.accountData = await this.paypayApi.login(this.addAccountForm.email, this.addAccountForm.password)
                   // ログイン結果取得
                   if (this.accountData) {
                     // パスワード認証
@@ -243,7 +255,7 @@
                       // 表示変更
                       util.noneDom('entryAccount')
                       util.showDom('pw')
-                      this.$refs['verifyPwForm'].model['pw'] = ''
+                      this.verifyPwForm.pw = ''
                     // 認証コード時
                     } else {
                       // ページ全体のテキストから該当文が含まれているかを確認
@@ -257,7 +269,7 @@
                         // 表示変更
                         util.noneDom('entryAccount')
                         util.showDom('verifyCode')
-                        this.$refs['verifyCodeForm'].model['code'] = ''
+                        this.verifyCodeForm.code = ''
                       } else {
                         util.showErrorBox('認証できませんでした')
                       }
@@ -291,7 +303,7 @@
                 util.showDom('loading')
                 // paypay
                 // アカウント認証
-                await this.paypayApi.verifyCode(this.accountData, this.$refs['verifyPwForm'].model['pw'], async (accountData) => {
+                await this.paypayApi.verifyCode(this.accountData, this.verifyPwForm.pw, async (accountData) => {
                   if (accountData) {
                     this.accountData = accountData
                     // 重複チェック
@@ -336,12 +348,12 @@
                 // ローディング
                 util.showDom('loading')
                 // サイト取得
-                var site = this.$refs['addAccountForm'].model['site']
+                var site = this.addAccountForm.site
                 // サイト判定
                 if (site === '0'){
                   // ラクマ
                   // アカウント認証
-                  var result = await this.rakumaApi.verifyCode(this.accountData, this.$refs['verifyCodeForm'].model['code'])
+                  var result = await this.rakumaApi.verifyCode(this.accountData, this.verifyCodeForm.code)
                   // ログイン結果取得
                   if (result) {
                     // アカウント認証OK
@@ -374,7 +386,7 @@
                 } else if (site === '1') {
                   // paypay
                   // アカウント認証
-                  await this.paypayApi.verifyCode(this.accountData, this.$refs['verifyCodeForm'].model['code'], async (accountData) => {
+                  await this.paypayApi.verifyCode(this.accountData, this.verifyCodeForm.code, async (accountData) => {
                     var log = new Log()
                     log.error("accountData:"+accountData)
                     if (accountData) {
@@ -433,8 +445,8 @@
                 // ローディング
                 util.showDom('loading')
                 // 種類を取得
-                var kind = this.$refs['postDataForm'].model['kind']
-                var data = this.$refs['postDataForm'].model['data']
+                var kind = this.postDataForm.kind
+                var data = this.postDataForm.data
                 // アカウント認証
                 this.accountData["postFlg"] = true
                 this.accountData["kind"] = kind

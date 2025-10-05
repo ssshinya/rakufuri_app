@@ -85,27 +85,25 @@
     },
     methods: {
       showSetting (index) {
-        // 表示が違う場合
-        if (index !== this.activeIndex) {
-          switch (index) {
-            case '1':
-              this.$router.push('/license')
-              break
-            case '2':
-              this.$router.push('/account')
-              break
-            case '3':
-              this.$router.push('/entryInterval')
-              break
-            case '4':
-              this.$router.push('/imagePath')
-              break
-            case '5':
-              this.$router.push('/transferData')
-              break
-            default:
-              break
-          }
+        // 常に遷移を許可する（activeでも遷移可能）
+        switch (index) {
+          case '1':
+            this.$router.push('/license')
+            break
+          case '2':
+            this.$router.push('/account')
+            break
+          case '3':
+            this.$router.push('/entryInterval')
+            break
+          case '4':
+            this.$router.push('/imagePath')
+            break
+          case '5':
+            this.$router.push('/transferData')
+            break
+          default:
+            break
         }
       }
     }
