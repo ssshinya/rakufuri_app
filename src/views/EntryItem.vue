@@ -1179,7 +1179,7 @@
       padding: 0;
     }
     .el-form {
-      background: white;
+      background: transparent;
     }
     .el-form-item {
       background: white;

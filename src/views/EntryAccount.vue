@@ -221,9 +221,11 @@
           this.$refs['addAccountForm'].validate(async (valid) => {
             if (valid) {
               try {
+                console.log('[EntryAccount] submitAddAccount START site=', this.addAccountForm.site)
                 // ライセンスチェック
                 var lflg = await util.checkLicense()
                 if (!lflg) {
+                  console.warn('[EntryAccount] license check NG')
                   return
                 }
                 // ローディング
@@ -234,7 +236,9 @@
                 if (site === '0'){
                   // ラクマ
                   // アカウント認証
+                  console.log('[EntryAccount] call RakumaApi.login email=', this.addAccountForm.email)
                   this.accountData = await this.rakumaApi.login(this.addAccountForm.email, this.addAccountForm.password)
+                  console.log('[EntryAccount] RakumaApi.login result=', this.accountData)
                   // ログイン結果取得
                   if (this.accountData) {
                     util.showInfoBox(this.accountData.message)
@@ -494,19 +498,43 @@
   <style>
   .entryAccount{
     padding: 20px 30px 0 30px;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    margin: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
     width:100%;
   }
   .entryAccount .site .el-radio{
     margin-right: 20px;
   }
   .verifyCode{
-    padding: 20px 30px 0 30px;
+    padding: 20px 30px 20px 30px;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    margin: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
     text-align: center;
     width:100%;
   }
   .pw{
     padding: 20px 30px 0 30px;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    margin: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
     text-align: center;
+    width:100%;
+  }
+  .postData{
+    padding: 20px 30px 0 30px;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    margin: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
     width:100%;
   }
   .kind p{
@@ -519,6 +547,16 @@
     margin-left: 0 !important;
     justify-content: center;
     display: flex;
+  }
+  /* 内側フォームはフラットに（外側のカードのみ表示） */
+  .entryAccount .el-form,
+  .verifyCode .el-form,
+  .pw .el-form,
+  .postData .el-form {
+    background: transparent;
+    box-shadow: none;
+    border: none;
+    padding: 0;
   }
   </style>
   

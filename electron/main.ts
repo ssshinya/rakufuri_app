@@ -227,7 +227,7 @@ function getCreateTableSQL(tableName: string): string | null {
         CREATE TABLE IF NOT EXISTS const (
           _id TEXT PRIMARY KEY,
           name TEXT,
-          value TEXT,
+            value TEXT,
           created_at TEXT,
           updated_at TEXT
         )
@@ -277,11 +277,11 @@ async function dbFind(tableName: string, query: any = {}): Promise<any[]> {
       }
       
       db.all(sql, values, (err, rows) => {
-        if (err) {
+          if (err) {
           console.error(`❌ Database ${tableName} find error:`, err)
-          reject(err)
-          return
-        }
+            reject(err)
+            return
+          }
         resolve(rows || [])
       })
     })
@@ -307,8 +307,8 @@ async function dbInsert(tableName: string, doc: any): Promise<any> {
           return
         }
         resolve({ id: this.lastID, changes: this.changes })
+        })
       })
-    })
   } catch (error) {
     console.error(`❌ Database ${tableName} insert error:`, error)
     throw error
@@ -338,8 +338,8 @@ async function dbUpdate(tableName: string, query: any, updateDoc: any, options: 
   } catch (error) {
     console.error(`❌ Database ${tableName} update error:`, error)
     throw error
+    }
   }
-}
 
 async function dbRemove(tableName: string, query: any): Promise<any> {
   try {
@@ -463,7 +463,7 @@ if (VITE_DEV_SERVER_URL) {
 // IPCハンドラーを設定
 ipcMain.handle('get-user-data-path', async () => {
   try {
-    return app.getPath('userData')
+  return app.getPath('userData')
   } catch (error) {
     console.error('Error getting user data path:', error)
     return null
@@ -472,7 +472,7 @@ ipcMain.handle('get-user-data-path', async () => {
 
 ipcMain.handle('get-app-version', async () => {
   try {
-    return app.getVersion()
+  return app.getVersion()
   } catch (error) {
     console.error('Error getting app version:', error)
     return '1.0.0'
@@ -481,7 +481,7 @@ ipcMain.handle('get-app-version', async () => {
 
 ipcMain.handle('get-app-name', async () => {
   try {
-    return app.getName()
+  return app.getName()
   } catch (error) {
     console.error('Error getting app name:', error)
     return 'rakufuri_app'
@@ -555,10 +555,10 @@ ipcMain.handle('db-upsert', async (_event: any, tableName: string, doc: any) => 
 
 ipcMain.handle('db-close', async (_event: any, tableName: string) => {
   try {
-    const db = dbInstances.get(tableName)
-    if (db) {
-      db.close()
-      dbInstances.delete(tableName)
+      const db = dbInstances.get(tableName)
+      if (db) {
+        db.close()
+        dbInstances.delete(tableName)
       console.log(`✅ Database ${tableName} closed`)
     }
   } catch (error) {
@@ -570,9 +570,9 @@ ipcMain.handle('db-close', async (_event: any, tableName: string) => {
 ipcMain.handle('db-close-all', async () => {
   try {
     for (const [tableName, db] of dbInstances) {
-      db.close()
-      console.log(`✅ Database ${tableName} closed`)
-    }
+          db.close()
+          console.log(`✅ Database ${tableName} closed`)
+        }
     dbInstances.clear()
   } catch (error) {
     console.error('❌ IPC db-close-all error:', error)
@@ -583,36 +583,40 @@ ipcMain.handle('db-close-all', async () => {
 // HTTPリクエスト用のIPCハンドラー
 ipcMain.handle('http-post', async (_event: any, url: string, data: any, headers: any = {}) => {
   try {
-    const response = await axios.post(url, data, { headers })
+    const response = await axios.post(url, data, { headers, validateStatus: () => true })
     return {
-      success: true,
+      success: response.status >= 200 && response.status < 400,
       status: response.status,
-      data: response.data
+      data: response.data,
+      headers: response.headers
     }
   } catch (error: any) {
     console.error('HTTP POST error:', error)
     return {
       success: false,
       status: error.response?.status || 500,
-      data: null
+      data: error.response?.data || null,
+      headers: error.response?.headers || {}
     }
   }
 })
 
 ipcMain.handle('http-get', async (_event: any, url: string, headers: any = {}) => {
   try {
-    const response = await axios.get(url, { headers })
+    const response = await axios.get(url, { headers, validateStatus: () => true })
     return {
-      success: true,
+      success: response.status >= 200 && response.status < 400,
       status: response.status,
-      data: response.data
+      data: response.data,
+      headers: response.headers
     }
   } catch (error: any) {
     console.error('HTTP GET error:', error)
     return {
       success: false,
       status: error.response?.status || 500,
-      data: null
+      data: error.response?.data || null,
+      headers: error.response?.headers || {}
     }
   }
 })
@@ -673,7 +677,7 @@ ipcMain.handle('http-post-formdata', async (_event: any, url: string, formData: 
       success: true,
       status: response.status,
       data: response.data
-    }
+      }
   } catch (error: any) {
     console.error('HTTP POST FormData error:', error)
     return {
@@ -689,8 +693,8 @@ app.on('before-quit', () => {
   console.log('🔄 Closing all database connections...')
   for (const [tableName, db] of dbInstances) {
     try {
-      db.close()
-      console.log(`✅ Database ${tableName} closed`)
+        db.close()
+        console.log(`✅ Database ${tableName} closed`)
     } catch (error) {
       console.error(`❌ Error closing database ${tableName}:`, error)
     }

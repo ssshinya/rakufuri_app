@@ -51,9 +51,9 @@ async function composite (filepath, callback) {
   } catch (error) {
     console.error('composite error:', error)
     // フォールバック: 元のファイルパスを返す
-    if (callback) {
+  if (callback) {
       callback(filepath)
-    } else {
+  } else {
       return filepath
     }
   }
@@ -61,7 +61,7 @@ async function composite (filepath, callback) {
 // イメージを700x700してtmpに保存します
 async function compositeForExcel (filepath, callback) {
   try {
-    // 変換不要か判定
+  // 変換不要か判定
     var ext = '.' + util.getExtension(filepath)
     var fileDir = filepath.replace(ext, '')
     fileDir = fileDir.replace('item_', '')
@@ -95,9 +95,9 @@ async function compositeForExcel (filepath, callback) {
   } catch (error) {
     console.error('compositeForExcel error:', error)
     // フォールバック: 元のファイルパスを返す
-    if (callback) {
+  if (callback) {
       callback(filepath)
-    } else {
+  } else {
       return filepath
     }
   }

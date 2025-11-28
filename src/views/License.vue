@@ -210,12 +210,13 @@
 }
 
 .el-form {
-  background: white;
+  background: transparent;
   max-width: 500px;
   margin: 0 auto;
-  padding: 30px;
-  border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  padding: 0;
+  border-radius: 0;
+  box-shadow: none;
+  border: none;
 }
 
 .el-form-item {

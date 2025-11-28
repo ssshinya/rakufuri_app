@@ -201,6 +201,7 @@ export class RakumaApi {
     try {
       var html = ''
       var status = '200'
+      this.log.request('[rakuma.login] START')
       // 1.Cookie取得
       // オプション設定
       /*
@@ -238,6 +239,7 @@ export class RakumaApi {
       
       let response = null
       try {
+        this.log.request('[rakuma.login] STEP1 GET login page url=' + url)
         // Electron環境ではIPC経由でHTTPリクエストを送信
         if (window.electronAPI && window.electronAPI.httpGet) {
           response = await window.electronAPI.httpGet(url, {
@@ -248,6 +250,7 @@ export class RakumaApi {
             // 成功時はレスポンスデータを整形
             status = response.status.toString()
             html = response.data
+            this.log.request('[rakuma.login] STEP1 OK status=' + status + ' html.length=' + (html ? String(html.length) : '0'))
           } else {
             // 失敗時はログを記録してnullを返す
             status = response.status.toString()
@@ -255,7 +258,9 @@ export class RakumaApi {
             return null
           }
         } else {
-          throw new Error('electronAPI not available')
+          const err = new Error('electronAPI not available')
+          this.log.error('[rakuma.login] STEP1 NG ' + err.message)
+          throw err
         }
         // 成功時のログを記録
         this.log.request('access info:url->' + url + ' status->' + status)
@@ -263,15 +268,40 @@ export class RakumaApi {
         // エラー時のステータスコードを取得してログに記録
         status = err.response?.status || err.code || '500'
         this.log.request('access info:url->' + url + ' status->' + status)
+        this.log.error('[rakuma.login] STEP1 EXCEPTION ' + (err?.stack || err))
         return null
       }
       this.log.html('login01',html)
       if (!html) {
+        this.log.error('[rakuma.login] STEP1 EMPTY_HTML')
         return null
       }
       // 必要変数を取得
       const cpid = this.getCpid(html)
       const ctid = this.getCtid(html)
+      this.log.request('[rakuma.login] STEP1 TOKENS cpid=' + (cpid || '') + ' ctid=' + (ctid || ''))
+      if (!cpid || !ctid) {
+        this.log.error('[rakuma.login] STEP1 TOKEN_MISSING cpid/ctid is empty')
+        return null
+      }
+      // STEP1で付与されたCookieを抽出
+      let step1CookieHeader = ''
+      try {
+        const setCookies = response && response.headers && (response.headers['set-cookie'] || response.headers['Set-Cookie'])
+        if (Array.isArray(setCookies) && setCookies.length > 0) {
+          step1CookieHeader = setCookies.map(c => c.split(';')[0]).join('; ')
+        } else if (typeof setCookies === 'string') {
+          // 1本にまとまってくる場合
+          step1CookieHeader = setCookies.split(',').map(c => c.split(';')[0]).join('; ')
+        }
+        if (step1CookieHeader) {
+          this.log.request('[rakuma.login] STEP1 COOKIE captured=' + step1CookieHeader)
+        } else {
+          this.log.request('[rakuma.login] STEP1 COOKIE none')
+        }
+      } catch (e) {
+        this.log.error('[rakuma.login] STEP1 COOKIE parse error ' + (e?.message || e))
+      }
       // 余分な空白を削除
       email = email.replace('　', '')
       email = email.replace(' ', '')
@@ -296,24 +326,46 @@ export class RakumaApi {
       
       response = null
       try {
+        this.log.request('[rakuma.login] STEP2 POST credentials url=' + url + ' email=' + email)
+        // フォームは application/x-www-form-urlencoded で送る
+        const urlEncoded = new URLSearchParams()
+        Object.keys(formData).forEach(k => {
+          if (formData[k] !== undefined && formData[k] !== null) {
+            urlEncoded.append(k, String(formData[k]))
+          }
+        })
         // Electron環境ではIPC経由でHTTPリクエストを送信
         if (window.electronAPI && window.electronAPI.httpPost) {
-          response = await window.electronAPI.httpPost(url, formData, {
+          response = await window.electronAPI.httpPost(url, urlEncoded.toString(), {
             'user-agent': consts.rakuma_user_agent,
-            'x-fril-version': consts.rakuma_version
+            'x-fril-version': consts.rakuma_version,
+            'content-type': 'application/x-www-form-urlencoded; charset=UTF-8',
+            'referer': 'https://api.fril.jp/api/v4/auth/rakuten/login',
+            'origin': 'https://grp03.id.rakuten.co.jp',
+            'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'accept-language': 'ja,en-US;q=0.9,en;q=0.8',
+            ...(step1CookieHeader ? { 'cookie': step1CookieHeader } : {})
           })
           if (response.success) {
             // 成功時はレスポンスデータを整形
             status = response.status.toString()
             html = response.data
+            this.log.request('[rakuma.login] STEP2 OK status=' + status + ' html.length=' + (html ? String(html.length) : '0'))
           } else {
             // 失敗時はログを記録してnullを返す
             status = response.status.toString()
             this.log.request('access info:url->' + url + ' status->' + status)
+            // 失敗時でも本文とヘッダを出力して原因特定
+            const bodyPreview = typeof response.data === 'string' ? response.data.slice(0, 500) : JSON.stringify(response.data || {})
+            this.log.error('[rakuma.login] STEP2 NG status=' + status)
+            this.log.error('[rakuma.login] STEP2 BODY ' + bodyPreview)
+            this.log.error('[rakuma.login] STEP2 HEADERS ' + JSON.stringify(response.headers || {}))
             return null
           }
         } else {
-          throw new Error('electronAPI not available')
+          const err = new Error('electronAPI not available')
+          this.log.error('[rakuma.login] STEP2 NG ' + err.message)
+          throw err
         }
         // 成功時のログを記録
         this.log.request('access info:url->' + url + ' status->' + status)
@@ -321,18 +373,23 @@ export class RakumaApi {
         // エラー時のステータスコードを取得してログに記録
         status = err.response?.status || err.code || '500'
         this.log.request('access info:url->' + url + ' status->' + status)
+        this.log.error('[rakuma.login] STEP2 EXCEPTION ' + (err?.stack || err))
         return null
       }
       this.log.html('login02',html)
       if (!html) {
+        this.log.error('[rakuma.login] STEP2 EMPTY_HTML')
         return null
       }
+      this.log.error('[rakuma.login] STEP2 HTML html=' + html)
       // 必要な要素を取得
       const authenticityToken = this.getAuthenticityToken(html)
       if (!authenticityToken) {
+        this.log.error('[rakuma.login] STEP2 AUTH_TOKEN_MISSING')
         return null
       }
       const message = this.getMessage(html)
+      this.log.request('[rakuma.login] STEP2 AUTH_TOKEN_OK message=' + (message || ''))
       // 返却
       if (authenticityToken) {
         // 情報を保存
@@ -358,6 +415,7 @@ export class RakumaApi {
       }
     } catch (error) {
       this.log.request('access error:url->' + url + ' error->' + error.stack)
+      this.log.error('[rakuma.login] UNCAUGHT ' + (error?.stack || error))
     }
   }
   // 認証コード

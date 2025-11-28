@@ -688,7 +688,7 @@ export class PaypayApi {
             const imageExists = await window.electronAPI.fileExists(imagePath)
             if (!imageExists) {
               this.log.error('画像' + p + 'が存在しません。:' + exhibitionData.item_id + ' path:' + imagePath)
-              return null
+          return null
             }
           } catch (error) {
             this.log.error('画像' + p + 'のパスチェックエラー。:' + exhibitionData.item_id + ' error:' + error.message)
@@ -708,8 +708,8 @@ export class PaypayApi {
       var imageUrl = []
       for (var i = 0; i < imageList.length; i++) {
         try {
-          // formData
-          let path = await image.compositeForExcel(imageList[i])
+        // formData
+        let path = await image.compositeForExcel(imageList[i])
           // 画像ファイルの存在確認はIPC経由で実行
           const pathExists = await window.electronAPI.fileExists(path)
           if (!pathExists) {
@@ -721,32 +721,32 @@ export class PaypayApi {
             'need_thumbnail': '1',
             'file': {
               path: path,
-              filename: 'files[0]',
-              contentType: 'image/jpg'
+                filename: 'files[0]',
+                contentType: 'image/jpg'
             }
-          }
-          url = 'https://image.auctions.yahooapis.jp/paypayflea/v1/images'
+        }
+        url = 'https://image.auctions.yahooapis.jp/paypayflea/v1/images'
           // ファイルアップロードはIPC経由で実行
-          var html = ''
-          var status = '200'
+        var html = ''
+        var status = '200'
           try {
             html = await window.electronAPI.uploadImage(url, formData, {
               'authorization': 'Bearer ' + account.token
-            })
+          })
           } catch (err) {
             status = err.status || 500
             html = ''
           }
-          this.log.request('access info:url->' + url + ' status->' + status)
-          var json = JSON.parse(html)
-          if (!json) {
-            return null
-          } else {
-            var images = json.images
-            for (var s=0; s<images.length; s++) {
-              var uri = images[s].url.replace(/\//g,'\\/')
-              imageUrl.push(uri)
-            }
+        this.log.request('access info:url->' + url + ' status->' + status)
+        var json = JSON.parse(html)
+        if (!json) {
+          return null
+        } else {
+          var images = json.images
+          for (var s=0; s<images.length; s++) {
+            var uri = images[s].url.replace(/\//g,'\\/')
+            imageUrl.push(uri)
+          }
           }
         } catch (error) {
           this.log.error('画像アップロードエラー: ' + error.message)
